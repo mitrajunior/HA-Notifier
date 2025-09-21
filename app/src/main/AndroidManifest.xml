@@ -31,6 +31,10 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".notify.ActionReceiver"
+            android:exported="false" />
+
         <activity
             android:name=".notify.AlertActivity"
             android:exported="false"
