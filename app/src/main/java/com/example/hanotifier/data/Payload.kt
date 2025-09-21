@@ -1,12 +1,14 @@
 package com.example.hanotifier.data
 
+import java.io.Serializable
+
 data class Action(
   val title: String,
   val type: String? = null, // "ha_service" | "url"
   val service: String? = null,
   val entity_id: String? = null,
-  val url: String? = null,
-)
+  val url: String? = null
+) : Serializable
 
 data class Payload(
   val title: String,
@@ -24,5 +26,5 @@ data class Payload(
   val collapseKey: String = (title + body).take(48),
   val group: String? = null,
   val templateId: Long? = null,
-  val templateName: String? = null,
+  val templateName: String? = null
 )
