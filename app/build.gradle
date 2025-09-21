@@ -16,10 +16,10 @@ android {
     versionName '1.0.0'
   }
 
-  // 👇 definir primeiro as signingConfigs
+  // Definir signingConfigs ANTES de buildTypes
   signingConfigs {
     create("release") {
-      // Pega do ambiente (CI) ou de gradle.properties local
+      // Lê do ambiente (CI) ou de gradle.properties local
       def storeFilePath = System.getenv("STORE_FILE") ?: (project.findProperty("STORE_FILE") ?: "")
       if (storeFilePath?.trim()) {
         storeFile file(storeFilePath)
@@ -30,7 +30,6 @@ android {
     }
   }
 
-  // 👇 depois os buildTypes (a release só usa signing se houver keystore)
   buildTypes {
     debug {
       applicationIdSuffix ".debug"
@@ -40,10 +39,10 @@ android {
       shrinkResources true
       proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
 
+      // Só assina se houver keystore definido
       if (signingConfigs.findByName("release")?.storeFile != null) {
         signingConfig signingConfigs.getByName("release")
       }
-      // se não houver keystore, gera app-release NÃO assinado (CI ainda faz o .apk para testes)
     }
   }
 
@@ -59,6 +58,7 @@ android {
 }
 
 dependencies {
+  // Compose BOM
   implementation platform('androidx.compose:compose-bom:2024.08.00')
   implementation 'androidx.compose.ui:ui'
   implementation 'androidx.compose.material3:material3'
@@ -68,15 +68,23 @@ dependencies {
   implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.4'
   implementation 'androidx.navigation:navigation-compose:2.8.0'
 
+  // ✅ Material Components (necessário para Theme.Material3.* em XML)
+  implementation 'com.google.android.material:material:1.12.0'
+
+  // DataStore
   implementation 'androidx.datastore:datastore-preferences:1.1.1'
 
+  // Room (histórico / templates)
   implementation 'androidx.room:room-ktx:2.6.1'
   kapt 'androidx.room:room-compiler:2.6.1'
 
+  // OkHttp (REST + WebSocket)
   implementation 'com.squareup.okhttp3:okhttp:4.12.0'
   implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
 
+  // Coroutines
   implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
 
+  // WorkManager (opcional)
   implementation 'androidx.work:work-runtime-ktx:2.9.1'
 }
