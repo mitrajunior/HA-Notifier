@@ -13,6 +13,7 @@ data class Action(
 data class Payload(
   val title: String,
   val body: String,
+  val bodyFormat: String? = null,
   val priority: String? = "info", // may be null to inherit
   val persistent: Boolean? = null,
   val popup: Boolean? = null,
