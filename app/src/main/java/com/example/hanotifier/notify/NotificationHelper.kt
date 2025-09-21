@@ -98,20 +98,7 @@ object NotificationHelper {
       val alertPI = PendingIntent.getActivity(ctx, notificationId, alertIntent, pendingFlags)
 
       val imageBitmap = payload.image?.let { loadBitmap(ctx, it) }
-      val markwon = Markwon.builder(ctx).build()
-      val renderedTitle = markwon.toMarkdown(payload.title).trim()
-      val renderedBody = markwon.toMarkdown(payload.body).trim()
 
-      val channel = when (priority) {
-        "critical" -> CH_CRIT
-        "warning" -> CH_WARN
-        else -> CH_INFO
-      }
-
-      val builder = NotificationCompat.Builder(ctx, channel)
-        .setSmallIcon(R.mipmap.ic_launcher)
-        .setContentTitle(renderedTitle)
-        .setContentText(renderedBody)
         .setPriority(NotificationCompat.PRIORITY_MAX)
         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         .setOngoing(persistent)
@@ -120,14 +107,7 @@ object NotificationHelper {
 
       if (imageBitmap != null) {
         builder.setLargeIcon(imageBitmap)
-        val style = NotificationCompat.BigPictureStyle().apply {
-          bigPicture(imageBitmap)
-          setSummaryText(renderedBody)
-        }
-        builder.setStyle(style)
-      } else {
-        val textStyle = NotificationCompat.BigTextStyle().bigText(renderedBody)
-        builder.setStyle(textStyle)
+
       }
 
       actions.forEachIndexed { index, action ->
@@ -143,34 +123,6 @@ object NotificationHelper {
         )
         builder.addAction(actionIcon(action), action.title, actionPI)
       }
-
-      if (priority == "critical" && popup) {
-        builder.setCategory(Notification.CATEGORY_ALARM)
-        builder.setFullScreenIntent(alertPI, true)
-        builder.setOngoing(true) // fallback persistente
-      }
-
-      NotificationManagerCompat.from(ctx).notify(notificationId, builder.build())
-    }
-  }
-
-  private fun actionIcon(action: Action): Int {
-    return when (action.type?.lowercase()) {
-      "url" -> android.R.drawable.ic_menu_view
-      "ha_service" -> android.R.drawable.ic_media_play
-      else -> android.R.drawable.ic_menu_send
-    }
-  }
-
-  private suspend fun loadBitmap(ctx: Context, ref: String): Bitmap? = withContext(Dispatchers.IO) {
-    try {
-      val uri = runCatching { Uri.parse(ref) }.getOrNull()
-      when (uri?.scheme?.lowercase()) {
-        "http", "https" -> fetchRemoteBitmap(uri.toString())
-        "data" -> decodeDataUri(ref)
-        "file" -> uri.path?.let { BitmapFactory.decodeFile(it) }
-        "content" -> ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-        else -> if (ref.startsWith('/')) BitmapFactory.decodeFile(ref) else null
       }
     } catch (t: Throwable) {
       Log.w(TAG, "Failed to load notification image", t)
@@ -190,6 +142,7 @@ object NotificationHelper {
       null
     }
   }
+
 
   private fun fetchRemoteBitmap(url: String): Bitmap? {
     return try {

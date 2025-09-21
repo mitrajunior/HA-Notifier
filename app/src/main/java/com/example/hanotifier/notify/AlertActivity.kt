@@ -1,10 +1,7 @@
 package com.example.hanotifier.notify
 
 import android.os.Bundle
-import android.text.TextUtils
-import android.text.method.LinkMovementMethod
-import android.util.TypedValue
-import android.view.View
+
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -21,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -31,21 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.isSpecified
-import androidx.compose.ui.unit.toPx
-import androidx.compose.ui.viewinterop.AndroidView
+
 import androidx.core.app.NotificationManagerCompat
 import coil.compose.AsyncImage
 import com.example.hanotifier.data.Action as NotificationAction
@@ -130,10 +114,6 @@ private fun AlertContent(
   actions: List<NotificationAction>,
   onAction: (NotificationAction) -> Unit,
   onLink: (String) -> Unit,
-  onAck: () -> Unit
-) {
-  val linkColor = MaterialTheme.colorScheme.primary
-  val textColor = MaterialTheme.colorScheme.onSurface
 
   Surface(color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -153,40 +133,7 @@ private fun AlertContent(
         ) {
           Text(title, style = MaterialTheme.typography.headlineSmall)
           if (body.isNotBlank()) {
-            MarkdownMessage(
-              markdown = body,
-              textColor = textColor,
-              linkColor = linkColor,
-              onLink = onLink
-            )
-          }
-          image?.takeIf { it.isNotBlank() }?.let { model ->
-            AsyncImage(
-              model = model,
-              contentDescription = null,
-              contentScale = ContentScale.Crop,
-              modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 240.dp)
-                .clip(RoundedCornerShape(16.dp))
-            )
-          }
-          if (actions.isNotEmpty()) {
-            Divider()
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-              actions.forEachIndexed { index, action ->
-                val buttonModifier = Modifier.fillMaxWidth()
-                if (index == 0) {
-                  Button(modifier = buttonModifier, onClick = { onAction(action) }) {
-                    Text(action.title)
-                  }
-                } else {
-                  OutlinedButton(modifier = buttonModifier, onClick = { onAction(action) }) {
-                    Text(action.title)
-                  }
-                }
-              }
-            }
+
           }
           Spacer(modifier = Modifier.heightIn(min = 4.dp))
           Row(
@@ -223,6 +170,77 @@ private fun MarkdownMessage(
               onLinkState.value(link)
             }
           })
+        }
+
+        override fun configureTheme(builder: MarkwonTheme.Builder) {
+          builder.linkColor(linkColorInt)
+        }
+      })
+      .build()
+  }
+  val parsed = remember(markwon, markdown) { markwon.toMarkdown(markdown) }
+  val bodyStyle = MaterialTheme.typography.bodyLarge
+
+  AndroidView(
+    modifier = modifier,
+    factory = { ctx ->
+      TextView(ctx).apply {
+        setPadding(0, 0, 0, 0)
+        highlightColor = 0
+        movementMethod = LinkMovementMethod.getInstance()
+        setTextColor(textColorInt)
+        linkTextColor = linkColorInt
+        applyTextStyle(this, bodyStyle, density)
+        markwon.setParsedMarkdown(this, parsed)
+      }
+    },
+    update = { view ->
+      view.setTextColor(textColorInt)
+      view.linkTextColor = linkColorInt
+      applyTextStyle(view, bodyStyle, density)
+      if (!TextUtils.equals(view.text, parsed)) {
+        markwon.setParsedMarkdown(view, parsed)
+      }
+    }
+  )
+}
+
+private fun applyTextStyle(view: TextView, style: TextStyle, density: Density) {
+  if (style.fontSize.isSpecified) {
+    view.setTextSize(TypedValue.COMPLEX_UNIT_SP, style.fontSize.value)
+  }
+  if (style.letterSpacing.isSpecified) {
+    view.letterSpacing = style.letterSpacing.value
+  }
+  if (style.lineHeight.isSpecified) {
+    val lineHeightPx = with(density) { style.lineHeight.toPx() }
+    val fontMetrics = view.paint.fontMetrics
+    val fontHeight = fontMetrics.descent - fontMetrics.ascent
+    val spacingAdd = (lineHeightPx - fontHeight).coerceAtLeast(0f)
+    view.setLineSpacing(spacingAdd, 1f)
+  } else {
+    view.setLineSpacing(0f, 1f)
+  }
+}
+
+@Composable
+private fun MarkdownMessage(
+  markdown: String,
+  textColor: Color,
+  linkColor: Color,
+  modifier: Modifier = Modifier.fillMaxWidth(),
+  onLink: (String) -> Unit,
+) {
+  val context = LocalContext.current
+  val density = LocalDensity.current
+  val onLinkState = rememberUpdatedState(onLink)
+  val textColorInt = textColor.toArgb()
+  val linkColorInt = linkColor.toArgb()
+  val markwon = remember(context, linkColorInt, textColorInt) {
+    Markwon.builder(context)
+      .usePlugin(object : AbstractMarkwonPlugin() {
+        override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
+          builder.linkResolver { _, link -> onLinkState.value(link) }
         }
 
         override fun configureTheme(builder: MarkwonTheme.Builder) {
