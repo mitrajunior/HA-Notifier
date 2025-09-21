@@ -48,7 +48,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.NotificationManagerCompat
@@ -295,14 +294,12 @@ private fun MarkdownMessage(
         highlightColor = 0
         movementMethod = LinkMovementMethod.getInstance()
         setTextColor(textColorInt)
-        setLinkTextColor(linkColorInt)
         applyTextStyle(this, bodyStyle, density)
         markwon.setParsedMarkdown(this, parsed)
       }
     },
     update = { view ->
       view.setTextColor(textColorInt)
-      view.setLinkTextColor(linkColorInt)
       applyTextStyle(view, bodyStyle, density)
       if (!TextUtils.equals(view.text, parsed)) {
         markwon.setParsedMarkdown(view, parsed)
