@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.hanotifier.MainActivity
 import com.example.hanotifier.R
 import com.example.hanotifier.data.Prefs
+import com.example.hanotifier.notify.NotificationHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -25,6 +26,9 @@ class WsService : LifecycleService() {
     const val CH_ID = "ws_foreground"
 
     fun start(ctx: Context) {
+      if (!NotificationHelper.canPostNotifications(ctx)) {
+        return
+      }
       val intent = Intent(ctx, WsService::class.java)
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         ctx.startForegroundService(intent)
@@ -106,7 +110,9 @@ class WsService : LifecycleService() {
       this,
       0,
       Intent(this, MainActivity::class.java),
-      PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+      PendingIntent.FLAG_UPDATE_CURRENT or (
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+      )
     )
     return NotificationCompat.Builder(this, CH_ID)
       .setSmallIcon(R.mipmap.ic_launcher)
