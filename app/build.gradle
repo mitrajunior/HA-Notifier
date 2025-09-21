@@ -1,0 +1,72 @@
+plugins {
+  id 'com.android.application'
+  id 'org.jetbrains.kotlin.android'
+  id 'kotlin-kapt'
+}
+
+android {
+  namespace 'com.example.hanotifier'
+  compileSdk 34
+
+  defaultConfig {
+    applicationId 'com.example.hanotifier'
+    minSdk 24
+    targetSdk 34
+    versionCode 1
+    versionName '1.0.0'
+  }
+
+  buildTypes {
+    debug {
+      applicationIdSuffix ".debug"
+    }
+    release {
+      minifyEnabled true
+      shrinkResources true
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      signingConfig signingConfigs.release
+    }
+  }
+
+  signingConfigs {
+    release {
+      storeFile file(System.getProperty('STORE_FILE', project.rootProject.file('keystore.jks').path))
+      storePassword System.getProperty('STORE_PASSWORD', project.findProperty('STORE_PASSWORD')) ?: 'changeit'
+      keyAlias System.getProperty('KEY_ALIAS', project.findProperty('KEY_ALIAS')) ?: 'release'
+      keyPassword System.getProperty('KEY_PASSWORD', project.findProperty('KEY_PASSWORD')) ?: 'changeit'
+    }
+  }
+
+  buildFeatures {
+    compose true
+  }
+  composeOptions {
+    kotlinCompilerExtensionVersion '1.5.14'
+  }
+  packagingOptions {
+    resources { excludes += ['/META-INF/{AL2.0,LGPL2.1}'] }
+  }
+}
+
+dependencies {
+  implementation platform('androidx.compose:compose-bom:2024.08.00')
+  implementation 'androidx.compose.ui:ui'
+  implementation 'androidx.compose.material3:material3'
+  implementation 'androidx.compose.ui:ui-tooling-preview'
+  debugImplementation 'androidx.compose.ui:ui-tooling'
+  implementation 'androidx.activity:activity-compose:1.9.2'
+  implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.4'
+  implementation 'androidx.navigation:navigation-compose:2.8.0'
+
+  implementation 'androidx.datastore:datastore-preferences:1.1.1'
+
+  implementation 'androidx.room:room-ktx:2.6.1'
+  kapt 'androidx.room:room-compiler:2.6.1'
+
+  implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+  implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+
+  implementation 'androidx.work:work-runtime-ktx:2.9.1'
+}
