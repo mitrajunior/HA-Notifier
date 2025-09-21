@@ -18,20 +18,28 @@ sealed class Route(val route: String) {
   data object Templates: Route("templates")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNav() {
   val nav = rememberNavController()
   val backStack by nav.currentBackStackEntryAsState()
+
   Scaffold(
     topBar = {
       CenterAlignedTopAppBar(
         title = { Text("HA Notifier") },
         actions = {
           IconButton(onClick = { nav.navigate(Route.Templates.route) }) {
-            Icon(painterResource(android.R.drawable.ic_menu_add), contentDescription = "Templates")
+            Icon(
+              painterResource(android.R.drawable.ic_menu_add),
+              contentDescription = "Templates"
+            )
           }
           IconButton(onClick = { nav.navigate(Route.Settings.route) }) {
-            Icon(painterResource(android.R.drawable.ic_menu_manage), contentDescription = "Definições")
+            Icon(
+              painterResource(android.R.drawable.ic_menu_manage),
+              contentDescription = "Definições"
+            )
           }
         }
       )
