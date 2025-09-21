@@ -19,6 +19,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.hanotifier.R
 import com.example.hanotifier.data.*
+import io.noties.markwon.Markwon
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -98,6 +99,7 @@ object NotificationHelper {
 
       val imageBitmap = payload.image?.let { loadBitmap(ctx, it) }
 
+
       val channel = when (priority) {
         "critical" -> CH_CRIT
         "warning" -> CH_WARN
@@ -106,8 +108,7 @@ object NotificationHelper {
 
       val builder = NotificationCompat.Builder(ctx, channel)
         .setSmallIcon(R.mipmap.ic_launcher)
-        .setContentTitle(payload.title)
-        .setContentText(payload.body)
+
         .setPriority(NotificationCompat.PRIORITY_MAX)
         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         .setOngoing(persistent)
@@ -119,10 +120,7 @@ object NotificationHelper {
         builder.setStyle(
           NotificationCompat.BigPictureStyle()
             .bigPicture(imageBitmap)
-            .setSummaryText(payload.body)
-        )
-      } else {
-        builder.setStyle(NotificationCompat.BigTextStyle().bigText(payload.body))
+
       }
 
       actions.forEachIndexed { index, action ->
