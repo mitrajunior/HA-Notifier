@@ -34,7 +34,11 @@ import androidx.core.app.NotificationManagerCompat
 import coil.compose.AsyncImage
 import com.example.hanotifier.data.Action as NotificationAction
 import com.example.hanotifier.ui.theme.AppTheme
-
+import io.noties.markwon.AbstractMarkwonPlugin
+import io.noties.markwon.Markwon
+import io.noties.markwon.MarkwonConfiguration
+import io.noties.markwon.core.MarkwonTheme
+import io.noties.markwon.LinkResolver
 import java.util.ArrayList
 
 class AlertActivity : ComponentActivity() {
@@ -110,9 +114,6 @@ private fun AlertContent(
   actions: List<NotificationAction>,
   onAction: (NotificationAction) -> Unit,
   onLink: (String) -> Unit,
-  onAck: () -> Unit,
-) {
-  val linkColor = MaterialTheme.colorScheme.primary
 
   Surface(color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -133,7 +134,7 @@ private fun AlertContent(
           Text(title, style = MaterialTheme.typography.headlineSmall)
           if (body.isNotBlank()) {
 
-         
+          }
           Spacer(modifier = Modifier.heightIn(min = 4.dp))
           Row(
             modifier = Modifier.fillMaxWidth(),
@@ -144,6 +145,81 @@ private fun AlertContent(
         }
       }
     }
+  }
+}
+
+@Composable
+private fun MarkdownMessage(
+  markdown: String,
+  textColor: Color,
+  linkColor: Color,
+  modifier: Modifier = Modifier.fillMaxWidth(),
+  onLink: (String) -> Unit
+) {
+  val context = LocalContext.current
+  val density = LocalDensity.current
+  val onLinkState = rememberUpdatedState(onLink)
+  val textColorInt = textColor.toArgb()
+  val linkColorInt = linkColor.toArgb()
+  val markwon = remember(context, linkColorInt, textColorInt) {
+    Markwon.builder(context)
+      .usePlugin(object : AbstractMarkwonPlugin() {
+        override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
+          builder.linkResolver(object : LinkResolver {
+            override fun resolve(view: View, link: String) {
+              onLinkState.value(link)
+            }
+          })
+        }
+
+        override fun configureTheme(builder: MarkwonTheme.Builder) {
+          builder.linkColor(linkColorInt)
+        }
+      })
+      .build()
+  }
+  val parsed = remember(markwon, markdown) { markwon.toMarkdown(markdown) }
+  val bodyStyle = MaterialTheme.typography.bodyLarge
+
+  AndroidView(
+    modifier = modifier,
+    factory = { ctx ->
+      TextView(ctx).apply {
+        setPadding(0, 0, 0, 0)
+        highlightColor = 0
+        movementMethod = LinkMovementMethod.getInstance()
+        setTextColor(textColorInt)
+        linkTextColor = linkColorInt
+        applyTextStyle(this, bodyStyle, density)
+        markwon.setParsedMarkdown(this, parsed)
+      }
+    },
+    update = { view ->
+      view.setTextColor(textColorInt)
+      view.linkTextColor = linkColorInt
+      applyTextStyle(view, bodyStyle, density)
+      if (!TextUtils.equals(view.text, parsed)) {
+        markwon.setParsedMarkdown(view, parsed)
+      }
+    }
+  )
+}
+
+private fun applyTextStyle(view: TextView, style: TextStyle, density: Density) {
+  if (style.fontSize.isSpecified) {
+    view.setTextSize(TypedValue.COMPLEX_UNIT_SP, style.fontSize.value)
+  }
+  if (style.letterSpacing.isSpecified) {
+    view.letterSpacing = style.letterSpacing.value
+  }
+  if (style.lineHeight.isSpecified) {
+    val lineHeightPx = with(density) { style.lineHeight.toPx() }
+    val fontMetrics = view.paint.fontMetrics
+    val fontHeight = fontMetrics.descent - fontMetrics.ascent
+    val spacingAdd = (lineHeightPx - fontHeight).coerceAtLeast(0f)
+    view.setLineSpacing(spacingAdd, 1f)
+  } else {
+    view.setLineSpacing(0f, 1f)
   }
 }
 
