@@ -15,6 +15,7 @@ import com.example.hanotifier.MainActivity
 import com.example.hanotifier.R
 import com.example.hanotifier.data.Prefs
 import com.example.hanotifier.notify.NotificationHelper
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -45,6 +46,7 @@ class WsService : LifecycleService() {
 
   private var observeJob: Job? = null
 
+  @OptIn(ExperimentalCoroutinesApi::class)
   override fun onCreate() {
     super.onCreate()
     ensureChannel()
@@ -57,15 +59,21 @@ class WsService : LifecycleService() {
         prefs.wanUrl,
         prefs.token,
         prefs.wsEnabled,
-        prefs.wsPreferLan
-      ) { lan, wan, token, enabled, preferLan ->
+        prefs.wsPreferLan,
+        Connectivity.observeNetworkType(this@WsService)
+      ) { lan, wan, token, enabled, preferLan, networkType ->
         val trimmedToken = token.trim()
+        val preferLanOnThisNetwork = preferLan && networkType == Connectivity.NetworkType.WIFI
+        val lanUrl = lan.takeIf { it.isNotBlank() }
+        val wanUrl = wan.takeIf { it.isNotBlank() }
+        val baseUrl = when {
+          preferLanOnThisNetwork && lanUrl != null -> lanUrl
+          wanUrl != null -> wanUrl
+          else -> lanUrl
+        }
         WsConfig(
           enabled = enabled,
-          wsUrl = WsManager.buildWsUrl(
-            (if (preferLan) lan.takeIf { it.isNotBlank() } else wan.takeIf { it.isNotBlank() })
-              ?: lan.takeIf { it.isNotBlank() } ?: wan
-          ),
+          wsUrl = WsManager.buildWsUrl(baseUrl),
           token = trimmedToken.takeIf { it.isNotBlank() }
         )
       }.collect { config ->

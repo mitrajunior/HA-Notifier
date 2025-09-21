@@ -122,6 +122,7 @@ object WsManager {
       val payload = Payload(
         title = data.optString("title", "Alerta"),
         body = data.optString("body", ""),
+        bodyFormat = data.optString("bodyFormat", data.optString("body_format", null)),
         priority = data.optString("priority", "info"),
         persistent = data.optBoolean("persistent", false),
         popup = data.optBoolean("popup", false),

@@ -7,12 +7,13 @@ data class Action(
   val type: String? = null, // "ha_service" | "url"
   val service: String? = null,
   val entity_id: String? = null,
-
+  val url: String? = null,
 ) : Serializable
 
 data class Payload(
   val title: String,
   val body: String,
+  val bodyFormat: String? = null,
   val priority: String? = "info", // may be null to inherit
   val persistent: Boolean? = null,
   val popup: Boolean? = null,
