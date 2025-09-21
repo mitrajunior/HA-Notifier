@@ -309,13 +309,13 @@ private fun MarkdownMessage(
 }
 
 private fun applyTextStyle(view: TextView, style: TextStyle, density: Density) {
-  if (style.fontSize.isSpecified) {
+  if (style.fontSize != TextUnit.Unspecified) {
     view.setTextSize(TypedValue.COMPLEX_UNIT_SP, style.fontSize.value)
   }
-  if (style.letterSpacing.isSpecified) {
+  if (style.letterSpacing != TextUnit.Unspecified) {
     view.letterSpacing = style.letterSpacing.value
   }
-  if (style.lineHeight.isSpecified) {
+  if (style.lineHeight != TextUnit.Unspecified) {
     val lineHeightPx = with(density) { style.lineHeight.toPx() }
     val fontMetrics = view.paint.fontMetrics
     val fontHeight = fontMetrics.descent - fontMetrics.ascent
