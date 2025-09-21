@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PROJECT_DIR: .   # muda se o app estiver numa subpasta
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,44 +20,56 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Install Android SDK (cmdline-tools)
+        run: |
+          sudo mkdir -p /opt/android-sdk/cmdline-tools
+          cd /opt/android-sdk/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdtools.zip
+          sudo mkdir -p /opt/android-sdk/cmdline-tools/tools
+          sudo unzip -q cmdtools.zip -d /opt/android-sdk/cmdline-tools/tools
+          echo "ANDROID_SDK_ROOT=/opt/android-sdk" >> $GITHUB_ENV
+          echo "PATH=/opt/android-sdk/cmdline-tools/tools/bin:/opt/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+      - name: Accept licenses & install platforms/build-tools
+        run: |
+          yes | sdkmanager --sdk_root=${ANDROID_SDK_ROOT} --licenses
+          sdkmanager --sdk_root=${ANDROID_SDK_ROOT} \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
+
+      - name: Set up Gradle (no wrapper)
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7
 
       - name: Build Debug APK
-        run: ./gradlew --no-daemon assembleDebug
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle --no-daemon assembleDebug
 
       - name: Upload APK (debug)
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
 
-      # Release opcional (assinado se forneceres o keystore via secrets)
+      # Release opcional (assinado se forneceres secrets do keystore)
       - name: Build Release APK
+        working-directory: ${{ env.PROJECT_DIR }}
         env:
-          STORE_FILE: ${{ secrets.STORE_FILE }}   # keystore.jks em base64
+          STORE_FILE: ${{ secrets.STORE_FILE }}   # keystore.jks em base64 (opcional)
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ -n "${{ env.STORE_FILE }}" ]; then
-            echo "${{ secrets.STORE_FILE }}" | base64 -d > keystore.jks
+          if [ -n "${STORE_FILE}" ]; then
+            echo "${STORE_FILE}" | base64 -d > keystore.jks
           fi
-          ./gradlew --no-daemon assembleRelease || true
+          gradle --no-daemon assembleRelease || true
 
       - name: Upload APK (release se existir)
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: ignore
