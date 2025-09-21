@@ -1,60 +1,181 @@
 package com.example.hanotifier.ui.screens
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
 import com.example.hanotifier.data.Prefs
 import com.example.hanotifier.net.WsManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(padding: PaddingValues) {
   val ctx = LocalContext.current
   val prefs = remember { Prefs(ctx) }
-  val scope = rememberCoroutineScope()
+  val writeScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
 
-  val lanUrl by prefs.lanUrl.collectAsState(initial = "")
-  val wanUrl by prefs.wanUrl.collectAsState(initial = "")
-  val token by prefs.token.collectAsState(initial = "")
+  val lanFlow by prefs.lanUrl.collectAsState(initial = "")
+  val wanFlow by prefs.wanUrl.collectAsState(initial = "")
+  val tokenFlow by prefs.token.collectAsState(initial = "")
   val fullScreen by prefs.fullScreen.collectAsState(initial = true)
   val persistent by prefs.persistent.collectAsState(initial = true)
   val wsEnabled by prefs.wsEnabled.collectAsState(initial = false)
   val wsPreferLan by prefs.wsPreferLan.collectAsState(initial = true)
 
-  // (Re)inicia WS quando configurações mudam
-  LaunchedEffect(lanUrl, wanUrl, token, wsEnabled, wsPreferLan) {
-    WsManager.start(ctx, lanUrl, wanUrl, token, wsEnabled, wsPreferLan)
+  var lan by remember { mutableStateOf(lanFlow) }
+  var wan by remember { mutableStateOf(wanFlow) }
+  var token by remember { mutableStateOf(tokenFlow) }
+  var showToken by remember { mutableStateOf(false) }
+
+  LaunchedEffect(lanFlow) { lan = lanFlow }
+  LaunchedEffect(wanFlow) { wan = wanFlow }
+  LaunchedEffect(tokenFlow) { token = tokenFlow }
+
+  val saveJob = remember { mutableStateOf<Job?>(null) }
+  fun saveInputs() {
+    saveJob.value?.cancel()
+    saveJob.value = writeScope.launch {
+      prefs.setLanUrl(lan.trim())
+      prefs.setWanUrl(wan.trim())
+      prefs.setToken(token.trim())
+    }
   }
 
-  Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    Text("Ligação ao Home Assistant", style = MaterialTheme.typography.titleMedium)
-    OutlinedTextField(lanUrl, { v -> scope.launch { prefs.setLanUrl(v) } }, label = { Text("URL LAN (ex: http://ha.local:8123)") }, modifier = Modifier.fillMaxWidth())
-    OutlinedTextField(wanUrl, { v -> scope.launch { prefs.setWanUrl(v) } }, label = { Text("URL Externa (Nabu Casa/reverse proxy)") }, modifier = Modifier.fillMaxWidth())
-    OutlinedTextField(token, { v -> scope.launch { prefs.setToken(v) } }, label = { Text("Long-Lived Access Token (para WebSocket/REST)") }, modifier = Modifier.fillMaxWidth())
+  fun scheduleSave() {
+    saveJob.value?.cancel()
+    saveJob.value = writeScope.launch {
+      delay(500)
+      prefs.setLanUrl(lan.trim())
+      prefs.setWanUrl(wan.trim())
+      prefs.setToken(token.trim())
+    }
+  }
 
-    Divider()
-    Text("Comportamento de notificações", style = MaterialTheme.typography.titleMedium)
-    Row {
-      Switch(checked = fullScreen, onCheckedChange = { scope.launch { prefs.setFullScreen(it) } })
-      Spacer(Modifier.width(8.dp)); Text("Usar popup (full-screen) para crítico")
+  Column(
+    Modifier
+      .padding(padding)
+      .padding(16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp)
+  ) {
+    Text("Ligação ao Home Assistant", style = MaterialTheme.typography.titleMedium)
+
+    OutlinedTextField(
+      value = lan,
+      onValueChange = { value -> lan = value; scheduleSave() },
+      label = { Text("URL LAN (ex: http://ha.local:8123)") },
+      modifier = Modifier.fillMaxWidth(),
+      singleLine = true,
+      keyboardOptions = KeyboardOptions(
+        keyboardType = KeyboardType.Uri,
+        autoCorrectEnabled = false,
+        imeAction = ImeAction.Next
+      )
+    )
+
+    OutlinedTextField(
+      value = wan,
+      onValueChange = { value -> wan = value; scheduleSave() },
+      label = { Text("URL Externa (Nabu Casa/reverse proxy)") },
+      modifier = Modifier.fillMaxWidth(),
+      singleLine = true,
+      keyboardOptions = KeyboardOptions(
+        keyboardType = KeyboardType.Uri,
+        autoCorrectEnabled = false,
+        imeAction = ImeAction.Next
+      )
+    )
+
+    OutlinedTextField(
+      value = token,
+      onValueChange = { value -> token = value; scheduleSave() },
+      label = { Text("Long-Lived Token") },
+      modifier = Modifier.fillMaxWidth(),
+      singleLine = true,
+      visualTransformation = if (showToken) VisualTransformation.None else PasswordVisualTransformation(),
+      keyboardOptions = KeyboardOptions(
+        keyboardType = KeyboardType.Password,
+        autoCorrectEnabled = false,
+        imeAction = ImeAction.Done
+      ),
+      trailingIcon = {
+        IconButton(onClick = { showToken = !showToken }) {
+          Icon(
+            imageVector = if (showToken) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+            contentDescription = if (showToken) "Ocultar" else "Mostrar"
+          )
+        }
+      }
+    )
+
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      Button(onClick = { saveInputs() }) { Text("Guardar agora") }
+      OutlinedButton(onClick = {
+        val base = (if (wsPreferLan) lan.takeIf { it.isNotBlank() } else wan.takeIf { it.isNotBlank() })
+          ?: lan.takeIf { it.isNotBlank() }
+          ?: wan.takeIf { it.isNotBlank() }
+        val url = WsManager.buildWsUrl(base?.trim())
+        val msg = if (!url.isNullOrBlank()) "URL OK: $url" else "URL inválido"
+        Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
+      }) { Text("Testar ligação") }
     }
-    Row {
-      Switch(checked = persistent, onCheckedChange = { scope.launch { prefs.setPersistent(it) } })
-      Spacer(Modifier.width(8.dp)); Text("Tornar crítico persistente")
-    }
+
+    OutlinedButton(onClick = {
+      try {
+        val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        ctx.startActivity(intent)
+      } catch (_: Throwable) {
+        Toast.makeText(ctx, "Não foi possível abrir as definições", Toast.LENGTH_SHORT).show()
+      }
+    }) { Text("Abrir definições de bateria") }
 
     Divider()
     Text("WebSocket (LAN/Externo)", style = MaterialTheme.typography.titleMedium)
-    Row {
-      Switch(checked = wsEnabled, onCheckedChange = { scope.launch { prefs.setWsEnabled(it) } })
-      Spacer(Modifier.width(8.dp)); Text("Ativar subscrição WebSocket (app_notify)")
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Switch(checked = wsEnabled, onCheckedChange = { checked ->
+        writeScope.launch { prefs.setWsEnabled(checked) }
+      })
+      Spacer(Modifier.width(8.dp))
+      Text("Ativar subscrição WebSocket (app_notify)")
     }
-    Row {
-      Switch(checked = wsPreferLan, onCheckedChange = { scope.launch { prefs.setWsPreferLan(it) } })
-      Spacer(Modifier.width(8.dp)); Text("Preferir URL LAN quando disponível")
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Switch(checked = wsPreferLan, onCheckedChange = { checked ->
+        writeScope.launch { prefs.setWsPreferLan(checked) }
+      })
+      Spacer(Modifier.width(8.dp))
+      Text("Preferir URL LAN")
+    }
+
+    Divider()
+    Text("Comportamento de notificações", style = MaterialTheme.typography.titleMedium)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Switch(checked = fullScreen, onCheckedChange = { writeScope.launch { prefs.setFullScreen(it) } })
+      Spacer(Modifier.width(8.dp))
+      Text("Usar popup (full-screen) para crítico")
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Switch(checked = persistent, onCheckedChange = { writeScope.launch { prefs.setPersistent(it) } })
+      Spacer(Modifier.width(8.dp))
+      Text("Tornar crítico persistente")
     }
 
     Spacer(Modifier.height(16.dp))
