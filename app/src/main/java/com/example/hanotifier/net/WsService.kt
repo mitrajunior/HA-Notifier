@@ -59,16 +59,18 @@ class WsService : LifecycleService() {
         prefs.wsEnabled,
         prefs.wsPreferLan
       ) { lan, wan, token, enabled, preferLan ->
-        Triple(
-          enabled,
-          WsManager.buildWsUrl(
+        val trimmedToken = token.trim()
+        WsConfig(
+          enabled = enabled,
+          wsUrl = WsManager.buildWsUrl(
             (if (preferLan) lan.takeIf { it.isNotBlank() } else wan.takeIf { it.isNotBlank() })
               ?: lan.takeIf { it.isNotBlank() } ?: wan
           ),
-          token
+          token = trimmedToken.takeIf { it.isNotBlank() }
         )
-      }.collect { (enabled, wsUrl, token) ->
-        if (enabled && !wsUrl.isNullOrBlank()) {
+      }.collect { config ->
+        val (enabled, wsUrl, token) = config
+        if (enabled && !wsUrl.isNullOrBlank() && token != null) {
           WsManager.startInService(this@WsService, wsUrl, token) { state ->
             val label = when (state) {
               WsState.CONNECTED -> "Ligado ao Home Assistant"
@@ -79,11 +81,23 @@ class WsService : LifecycleService() {
           }
         } else {
           WsManager.stop()
-          updateNotification("Desativado")
+          val message = when {
+            !enabled -> "Desativado"
+            wsUrl.isNullOrBlank() -> "URL em falta"
+            token == null -> "Token em falta"
+            else -> "Configuração inválida"
+          }
+          updateNotification(message)
         }
       }
     }
   }
+
+  private data class WsConfig(
+    val enabled: Boolean,
+    val wsUrl: String?,
+    val token: String?
+  )
 
   override fun onDestroy() {
     observeJob?.cancel()

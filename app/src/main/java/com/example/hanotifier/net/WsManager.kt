@@ -60,16 +60,22 @@ object WsManager {
       var attempt = 0
       while (running) {
         val disconnectSignal = CompletableDeferred<Unit>()
+        var fatalError: Throwable? = null
         try {
           updateState(WsState.CONNECTING)
           socket = HaWebSocket(wsUrl, token, { text -> handleEvent(ctx, text) }) { throwable ->
-            if (!disconnectSignal.isCompleted) {
-              disconnectSignal.complete(Unit)
-            }
             if (throwable != null) {
-              Log.w(TAG, "Socket desconectado", throwable)
+              if (throwable is HaWebSocket.AuthException) {
+                fatalError = throwable
+                Log.e(TAG, "Autenticação WebSocket falhou: ${throwable.message}")
+              } else {
+                Log.w(TAG, "Socket desconectado", throwable)
+              }
             } else {
               Log.i(TAG, "Socket encerrado")
+            }
+            if (!disconnectSignal.isCompleted) {
+              disconnectSignal.complete(Unit)
             }
           }
           socket?.connect(client)
@@ -82,6 +88,9 @@ object WsManager {
           }
           Log.w(TAG, "Falha na ligação WS", t)
           if (!disconnectSignal.isCompleted) {
+            if (fatalError == null) {
+              fatalError = t
+            }
             disconnectSignal.complete(Unit)
           }
         } finally {
@@ -89,6 +98,12 @@ object WsManager {
           socket = null
         }
         if (!running) break
+        val fatal = fatalError
+        if (fatal is HaWebSocket.AuthException) {
+          running = false
+          updateState(WsState.DISCONNECTED)
+          break
+        }
         updateState(WsState.DISCONNECTED)
         attempt++
         val backoff = min(30_000L, 2_000L * attempt.toLong())
