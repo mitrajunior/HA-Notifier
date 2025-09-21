@@ -18,7 +18,11 @@ interface HistoryDao {
   suspend fun latest(limit: Int = 100): List<History>
 }
 
-@Database(entities = [History::class, Template::class], version = 2)
+@Database(
+  entities = [History::class, Template::class],
+  version = 2,
+  exportSchema = false   // ✅ evita o warning no CI
+)
 abstract class AppDb: RoomDatabase() {
   abstract fun history(): HistoryDao
   abstract fun templates(): TemplateDao
