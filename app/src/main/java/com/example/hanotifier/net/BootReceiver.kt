@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.example.hanotifier.data.Prefs
+import com.example.hanotifier.notify.NotificationHelper
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 
@@ -14,7 +15,7 @@ class BootReceiver : BroadcastReceiver() {
       val prefs = Prefs(context)
       runBlocking {
         val enabled = prefs.wsEnabled.firstOrNull() ?: false
-        if (enabled) {
+        if (enabled && NotificationHelper.canPostNotifications(context)) {
           WsService.start(context)
         }
       }

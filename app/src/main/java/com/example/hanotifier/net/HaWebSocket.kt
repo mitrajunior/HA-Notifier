@@ -3,6 +3,7 @@ package com.example.hanotifier.net
 import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.*
 import okio.ByteString
+import org.json.JSONObject
 
 class HaWebSocket(
   private val url: String,
@@ -30,15 +31,53 @@ class HaWebSocket(
   }
 
   override fun onOpen(webSocket: WebSocket, response: Response) {
-    token?.let { webSocket.send("{\"type\":\"auth\",\"access_token\":\"$it\"}") }
+    if (token == null) {
+      if (closed.compareAndSet(false, true)) {
+        onDisconnect(AuthException("Token em falta"))
+      }
+      webSocket.close(1008, "Token em falta")
+    }
   }
 
   override fun onMessage(webSocket: WebSocket, text: String) {
-    if (text.contains("auth_ok")) {
-      val id = msgId++
-      webSocket.send("{\"id\":$id,\"type\":\"subscribe_events\",\"event_type\":\"app_notify\"}")
-    } else if (text.contains("event")) {
-      onEvent(text)
+    val type = try {
+      JSONObject(text).optString("type")
+    } catch (_: Throwable) {
+      null
+    }
+    when (type) {
+      "auth_required" -> {
+        if (token == null) {
+          if (closed.compareAndSet(false, true)) {
+            onDisconnect(AuthException("Token em falta"))
+          }
+          webSocket.close(1008, "Token em falta")
+        } else {
+          val auth = JSONObject()
+            .put("type", "auth")
+            .put("access_token", token)
+          webSocket.send(auth.toString())
+        }
+      }
+      "auth_ok" -> {
+        val payload = JSONObject()
+          .put("id", msgId++)
+          .put("type", "subscribe_events")
+          .put("event_type", "app_notify")
+        webSocket.send(payload.toString())
+      }
+      "auth_invalid" -> {
+        if (closed.compareAndSet(false, true)) {
+          onDisconnect(AuthException("Token inválido"))
+        }
+        webSocket.close(4001, "Token inválido")
+      }
+      "event" -> onEvent(text)
+      else -> {
+        if (text.contains("event")) {
+          onEvent(text)
+        }
+      }
     }
   }
 
@@ -55,4 +94,6 @@ class HaWebSocket(
       onDisconnect(t)
     }
   }
+
+  class AuthException(message: String) : Exception(message)
 }
