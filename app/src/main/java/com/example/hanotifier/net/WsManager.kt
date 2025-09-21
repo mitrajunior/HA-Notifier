@@ -135,7 +135,6 @@ object WsManager {
     socket?.close()
     socket = null
     updateState(WsState.DISCONNECTED)
-    onState = null
   }
 
   private fun updateState(state: WsState) {
