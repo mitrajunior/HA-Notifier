@@ -15,6 +15,7 @@ import com.example.hanotifier.MainActivity
 import com.example.hanotifier.R
 import com.example.hanotifier.data.Prefs
 import com.example.hanotifier.notify.NotificationHelper
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -45,6 +46,7 @@ class WsService : LifecycleService() {
 
   private var observeJob: Job? = null
 
+  @OptIn(ExperimentalCoroutinesApi::class)
   override fun onCreate() {
     super.onCreate()
     ensureChannel()

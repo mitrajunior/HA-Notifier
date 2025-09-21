@@ -294,14 +294,12 @@ private fun MarkdownMessage(
         highlightColor = 0
         movementMethod = LinkMovementMethod.getInstance()
         setTextColor(textColorInt)
-        linkTextColor = linkColorInt
         applyTextStyle(this, bodyStyle, density)
         markwon.setParsedMarkdown(this, parsed)
       }
     },
     update = { view ->
       view.setTextColor(textColorInt)
-      view.linkTextColor = linkColorInt
       applyTextStyle(view, bodyStyle, density)
       if (!TextUtils.equals(view.text, parsed)) {
         markwon.setParsedMarkdown(view, parsed)

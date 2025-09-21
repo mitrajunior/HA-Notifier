@@ -7,7 +7,7 @@ data class Action(
   val type: String? = null, // "ha_service" | "url"
   val service: String? = null,
   val entity_id: String? = null,
-
+  val url: String? = null,
 ) : Serializable
 
 data class Payload(
