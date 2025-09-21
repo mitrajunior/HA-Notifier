@@ -1,6 +1,7 @@
 package com.example.hanotifier.ui.screens
 
 import android.content.Intent
+import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import com.example.hanotifier.data.Prefs
+import com.example.hanotifier.notify.NotificationHelper
 import com.example.hanotifier.net.WsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +35,7 @@ fun SettingsScreen(padding: PaddingValues) {
   val ctx = LocalContext.current
   val prefs = remember { Prefs(ctx) }
   val writeScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
+  val notificationsAllowed = NotificationHelper.canPostNotifications(ctx)
 
   val lanFlow by prefs.lanUrl.collectAsState(initial = "")
   val wanFlow by prefs.wanUrl.collectAsState(initial = "")
@@ -77,6 +80,27 @@ fun SettingsScreen(padding: PaddingValues) {
       .padding(16.dp),
     verticalArrangement = Arrangement.spacedBy(12.dp)
   ) {
+    if (!notificationsAllowed) {
+      ElevatedCard {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Text("Permitir notificações", style = MaterialTheme.typography.titleMedium)
+          Text("A app precisa da permissão de notificações para manter a ligação e mostrar alertas.")
+          Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = {
+              try {
+                ctx.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                  putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                  addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+              } catch (_: Throwable) {
+                Toast.makeText(ctx, "Abre manualmente as definições da app.", Toast.LENGTH_SHORT).show()
+              }
+            }) { Text("Abrir definições") }
+          }
+        }
+      }
+    }
+
     Text("Ligação ao Home Assistant", style = MaterialTheme.typography.titleMedium)
 
     OutlinedTextField(

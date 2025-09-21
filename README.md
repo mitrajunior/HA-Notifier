@@ -9,10 +9,12 @@ APP Android em **tema escuro azul**, para **notificações e alertas** integrado
 - Distribuição **sem Play Store** (APK sideload)
 
 ## Instalação (APK sideload)
-1. Compila: `./gradlew assembleRelease`
+1. Compila: `gradle assembleRelease`
 2. Assina com o teu `keystore.jks` (ver `gradle.properties`).
 3. Instala no dispositivo: `adb install -r app/build/outputs/apk/release/app-release.apk`.
 4. Na primeira execução, aceita a permissão de **Notificações**.
+
+> ℹ️ **Nota:** O repositório não inclui o Gradle Wrapper por restrições da plataforma. Instala o Gradle 8.9+ localmente (ou gera o wrapper na tua máquina) antes de correr os comandos acima.
 
 ## Configuração na APP
 1. ⚙️ Abre **Definições**.

@@ -1,13 +1,17 @@
 package com.example.hanotifier.notify
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.example.hanotifier.R
 import com.example.hanotifier.data.*
 import kotlinx.coroutines.*
@@ -16,6 +20,18 @@ object NotificationHelper {
   const val CH_INFO = "info"
   const val CH_WARN = "warning"
   const val CH_CRIT = "critical"
+
+  fun canPostNotifications(ctx: Context): Boolean {
+    val notificationsEnabled = NotificationManagerCompat.from(ctx).areNotificationsEnabled()
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+      return notificationsEnabled
+    }
+    val granted = ContextCompat.checkSelfPermission(
+      ctx,
+      Manifest.permission.POST_NOTIFICATIONS
+    ) == PackageManager.PERMISSION_GRANTED
+    return granted && notificationsEnabled
+  }
 
   fun ensureChannels(ctx: Context) {
     val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -46,6 +62,7 @@ object NotificationHelper {
   }
 
   fun show(ctx: Context, payload: Payload) {
+    if (!canPostNotifications(ctx)) return
     ensureChannels(ctx)
 
     // Launch merging and notify
