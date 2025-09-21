@@ -20,17 +20,13 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # ⬇️ Instala e configura o Android SDK + sdkmanager + packages
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
+          # tudo numa linha, separado por espaços
+          packages: platform-tools platforms;android-34 build-tools;34.0.0
 
-      # ⬇️ Usa Gradle “sem wrapper” (como não tens ./gradlew no repo)
-      - name: Set up Gradle
+      - name: Set up Gradle (sem wrapper)
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.7
@@ -45,11 +41,10 @@ jobs:
           name: app-debug-apk
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
 
-      # Opcional: release (assina se passares o keystore via secrets)
-      - name: Build Release APK
+      - name: Build Release APK (opcional, assinado se tiveres keystore)
         working-directory: ${{ env.PROJECT_DIR }}
         env:
-          STORE_FILE: ${{ secrets.STORE_FILE }}   # keystore.jks em base64 (opcional)
+          STORE_FILE: ${{ secrets.STORE_FILE }}   # conteúdo base64 do keystore.jks
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
