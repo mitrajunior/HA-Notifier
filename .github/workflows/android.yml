@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      PROJECT_DIR: .   # muda se o app estiver numa subpasta
+      PROJECT_DIR: .   # muda se o módulo "app" estiver noutra pasta
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,25 +20,17 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Install Android SDK (cmdline-tools)
-        run: |
-          sudo mkdir -p /opt/android-sdk/cmdline-tools
-          cd /opt/android-sdk/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdtools.zip
-          sudo mkdir -p /opt/android-sdk/cmdline-tools/tools
-          sudo unzip -q cmdtools.zip -d /opt/android-sdk/cmdline-tools/tools
-          echo "ANDROID_SDK_ROOT=/opt/android-sdk" >> $GITHUB_ENV
-          echo "PATH=/opt/android-sdk/cmdline-tools/tools/bin:/opt/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
+      # ⬇️ Instala e configura o Android SDK + sdkmanager + packages
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
 
-      - name: Accept licenses & install platforms/build-tools
-        run: |
-          yes | sdkmanager --sdk_root=${ANDROID_SDK_ROOT} --licenses
-          sdkmanager --sdk_root=${ANDROID_SDK_ROOT} \
-            "platform-tools" \
-            "platforms;android-34" \
-            "build-tools;34.0.0"
-
-      - name: Set up Gradle (no wrapper)
+      # ⬇️ Usa Gradle “sem wrapper” (como não tens ./gradlew no repo)
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.7
@@ -53,7 +45,7 @@ jobs:
           name: app-debug-apk
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
 
-      # Release opcional (assinado se forneceres secrets do keystore)
+      # Opcional: release (assina se passares o keystore via secrets)
       - name: Build Release APK
         working-directory: ${{ env.PROJECT_DIR }}
         env:
