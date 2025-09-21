@@ -11,6 +11,7 @@ import com.example.hanotifier.data.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TemplatesScreen(padding: PaddingValues) {
   val ctx = LocalContext.current
@@ -32,12 +33,19 @@ fun TemplatesScreen(padding: PaddingValues) {
 
     OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nome do template") }, modifier = Modifier.fillMaxWidth())
 
-    Row { Text("Prioridade: "); Spacer(Modifier.width(8.dp))
+    Row {
+      Text("Prioridade: ")
+      Spacer(Modifier.width(8.dp))
       listOf("info", "warning", "critical").forEach { opt ->
-        FilterChip(selected = (priority==opt), onClick = { priority = opt }, label = { Text(opt) })
+        FilterChip(
+          selected = (priority == opt),
+          onClick = { priority = opt },
+          label = { Text(opt) }
+        )
         Spacer(Modifier.width(8.dp))
       }
     }
+
     Row { Switch(persistent, { persistent = it }); Spacer(Modifier.width(8.dp)); Text("Persistente") }
     Row { Switch(popup, { popup = it }); Spacer(Modifier.width(8.dp)); Text("Popup (full-screen se crítico)") }
     Row { Switch(requireAck, { requireAck = it }); Spacer(Modifier.width(8.dp)); Text("Exigir reconhecimento") }
