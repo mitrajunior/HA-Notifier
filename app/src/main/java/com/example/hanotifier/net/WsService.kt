@@ -70,16 +70,7 @@ class WsService : LifecycleService() {
     }
 
     observeJob = lifecycleScope.launch {
-      prefsFlow
-        .combine(Connectivity.observeNetworkType(this@WsService)) { snapshot, networkType ->
-          val trimmedToken = snapshot.token.trim()
-          val preferLanOnThisNetwork = snapshot.preferLan && networkType == Connectivity.NetworkType.WIFI
-          val lanUrl = snapshot.lan.takeIf { it.isNotBlank() }
-          val wanUrl = snapshot.wan.takeIf { it.isNotBlank() }
-          val baseUrl = when {
-            preferLanOnThisNetwork && lanUrl != null -> lanUrl
-            wanUrl != null -> wanUrl
-            else -> lanUrl
+
           }
           WsConfig(
             enabled = snapshot.enabled,
