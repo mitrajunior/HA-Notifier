@@ -16,6 +16,21 @@ android {
     versionName '1.0.0'
   }
 
+  // 👇 definir primeiro as signingConfigs
+  signingConfigs {
+    create("release") {
+      // Pega do ambiente (CI) ou de gradle.properties local
+      def storeFilePath = System.getenv("STORE_FILE") ?: (project.findProperty("STORE_FILE") ?: "")
+      if (storeFilePath?.trim()) {
+        storeFile file(storeFilePath)
+        storePassword System.getenv("STORE_PASSWORD") ?: (project.findProperty("STORE_PASSWORD") ?: "")
+        keyAlias      System.getenv("KEY_ALIAS")      ?: (project.findProperty("KEY_ALIAS")      ?: "")
+        keyPassword   System.getenv("KEY_PASSWORD")   ?: (project.findProperty("KEY_PASSWORD")   ?: "")
+      }
+    }
+  }
+
+  // 👇 depois os buildTypes (a release só usa signing se houver keystore)
   buildTypes {
     debug {
       applicationIdSuffix ".debug"
@@ -24,16 +39,11 @@ android {
       minifyEnabled true
       shrinkResources true
       proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-      signingConfig signingConfigs.release
-    }
-  }
 
-  signingConfigs {
-    release {
-      storeFile file(System.getProperty('STORE_FILE', project.rootProject.file('keystore.jks').path))
-      storePassword System.getProperty('STORE_PASSWORD', project.findProperty('STORE_PASSWORD')) ?: 'changeit'
-      keyAlias System.getProperty('KEY_ALIAS', project.findProperty('KEY_ALIAS')) ?: 'release'
-      keyPassword System.getProperty('KEY_PASSWORD', project.findProperty('KEY_PASSWORD')) ?: 'changeit'
+      if (signingConfigs.findByName("release")?.storeFile != null) {
+        signingConfig signingConfigs.getByName("release")
+      }
+      // se não houver keystore, gera app-release NÃO assinado (CI ainda faz o .apk para testes)
     }
   }
 
