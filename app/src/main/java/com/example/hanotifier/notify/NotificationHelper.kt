@@ -98,9 +98,7 @@ object NotificationHelper {
       val alertPI = PendingIntent.getActivity(ctx, notificationId, alertIntent, pendingFlags)
 
       val imageBitmap = payload.image?.let { loadBitmap(ctx, it) }
-      val markwon = Markwon.builder(ctx).build()
-      val renderedTitle = markwon.toMarkdown(payload.title).trim()
-      val renderedBody = markwon.toMarkdown(payload.body).trim()
+
 
       val channel = when (priority) {
         "critical" -> CH_CRIT
@@ -110,8 +108,7 @@ object NotificationHelper {
 
       val builder = NotificationCompat.Builder(ctx, channel)
         .setSmallIcon(R.mipmap.ic_launcher)
-        .setContentTitle(renderedTitle)
-        .setContentText(renderedBody)
+
         .setPriority(NotificationCompat.PRIORITY_MAX)
         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         .setOngoing(persistent)
@@ -123,10 +120,7 @@ object NotificationHelper {
         builder.setStyle(
           NotificationCompat.BigPictureStyle()
             .bigPicture(imageBitmap)
-            .setSummaryText(renderedBody)
-        )
-      } else {
-        builder.setStyle(NotificationCompat.BigTextStyle().bigText(renderedBody))
+
       }
 
       actions.forEachIndexed { index, action ->

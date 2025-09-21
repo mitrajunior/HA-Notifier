@@ -1,9 +1,7 @@
 package com.example.hanotifier.notify
 
 import android.os.Bundle
-import android.text.TextUtils
-import android.text.method.LinkMovementMethod
-import android.util.TypedValue
+
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -20,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -30,29 +29,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.isSpecified
-import androidx.compose.ui.unit.toPx
-import androidx.compose.ui.viewinterop.AndroidView
+
 import androidx.core.app.NotificationManagerCompat
 import coil.compose.AsyncImage
 import com.example.hanotifier.data.Action as NotificationAction
 import com.example.hanotifier.ui.theme.AppTheme
-import io.noties.markwon.AbstractMarkwonPlugin
-import io.noties.markwon.Markwon
-import io.noties.markwon.MarkwonConfiguration
-import io.noties.markwon.core.MarkwonTheme
+
 import java.util.ArrayList
 
 class AlertActivity : ComponentActivity() {
@@ -131,7 +113,6 @@ private fun AlertContent(
   onAck: () -> Unit,
 ) {
   val linkColor = MaterialTheme.colorScheme.primary
-  val textColor = MaterialTheme.colorScheme.onSurface
 
   Surface(color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -151,41 +132,8 @@ private fun AlertContent(
         ) {
           Text(title, style = MaterialTheme.typography.headlineSmall)
           if (body.isNotBlank()) {
-            MarkdownMessage(
-              markdown = body,
-              textColor = textColor,
-              linkColor = linkColor,
-              onLink = onLink,
-            )
-          }
-          image?.takeIf { it.isNotBlank() }?.let { model ->
-            AsyncImage(
-              model = model,
-              contentDescription = null,
-              contentScale = ContentScale.Crop,
-              modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 240.dp)
-                .clip(RoundedCornerShape(16.dp))
-            )
-          }
-          if (actions.isNotEmpty()) {
-            Divider()
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-              actions.forEachIndexed { index, action ->
-                val buttonModifier = Modifier.fillMaxWidth()
-                if (index == 0) {
-                  Button(modifier = buttonModifier, onClick = { onAction(action) }) {
-                    Text(action.title)
-                  }
-                } else {
-                  OutlinedButton(modifier = buttonModifier, onClick = { onAction(action) }) {
-                    Text(action.title)
-                  }
-                }
-              }
-            }
-          }
+
+         
           Spacer(modifier = Modifier.heightIn(min = 4.dp))
           Row(
             modifier = Modifier.fillMaxWidth(),
