@@ -15,6 +15,7 @@ import com.example.hanotifier.MainActivity
 import com.example.hanotifier.R
 import com.example.hanotifier.data.Prefs
 import com.example.hanotifier.notify.NotificationHelper
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -45,53 +46,79 @@ class WsService : LifecycleService() {
 
   private var observeJob: Job? = null
 
+  @OptIn(ExperimentalCoroutinesApi::class)
   override fun onCreate() {
     super.onCreate()
     ensureChannel()
     startForeground(NOTIF_ID, buildNotification("A iniciar…"))
 
     val prefs = Prefs(this)
+    val prefsFlow = combine(
+      prefs.lanUrl,
+      prefs.wanUrl,
+      prefs.token,
+      prefs.wsEnabled,
+      prefs.wsPreferLan,
+    ) { lan, wan, token, enabled, preferLan ->
+      PrefSnapshot(
+        lan = lan,
+        wan = wan,
+        token = token,
+        enabled = enabled,
+        preferLan = preferLan,
+      )
+    }
+
     observeJob = lifecycleScope.launch {
-      combine(
-        prefs.lanUrl,
-        prefs.wanUrl,
-        prefs.token,
-        prefs.wsEnabled,
-        prefs.wsPreferLan
-      ) { lan, wan, token, enabled, preferLan ->
-        val trimmedToken = token.trim()
-        WsConfig(
-          enabled = enabled,
-          wsUrl = WsManager.buildWsUrl(
-            (if (preferLan) lan.takeIf { it.isNotBlank() } else wan.takeIf { it.isNotBlank() })
-              ?: lan.takeIf { it.isNotBlank() } ?: wan
-          ),
-          token = trimmedToken.takeIf { it.isNotBlank() }
-        )
-      }.collect { config ->
-        val (enabled, wsUrl, token) = config
-        if (enabled && !wsUrl.isNullOrBlank() && token != null) {
-          WsManager.startInService(this@WsService, wsUrl, token) { state ->
-            val label = when (state) {
-              WsState.CONNECTED -> "Ligado ao Home Assistant"
-              WsState.CONNECTING -> "A ligar…"
-              WsState.DISCONNECTED -> "Desligado"
-            }
-            updateNotification(label)
+      prefsFlow
+        .combine(Connectivity.observeNetworkType(this@WsService)) { snapshot, networkType ->
+          val trimmedToken = snapshot.token.trim()
+          val preferLanOnThisNetwork = snapshot.preferLan && networkType == Connectivity.NetworkType.WIFI
+          val lanUrl = snapshot.lan.takeIf { it.isNotBlank() }
+          val wanUrl = snapshot.wan.takeIf { it.isNotBlank() }
+          val baseUrl = when {
+            preferLanOnThisNetwork && lanUrl != null -> lanUrl
+            wanUrl != null -> wanUrl
+            else -> lanUrl
           }
-        } else {
-          WsManager.stop()
-          val message = when {
-            !enabled -> "Desativado"
-            wsUrl.isNullOrBlank() -> "URL em falta"
-            token == null -> "Token em falta"
-            else -> "Configuração inválida"
-          }
-          updateNotification(message)
+          WsConfig(
+            enabled = snapshot.enabled,
+            wsUrl = WsManager.buildWsUrl(baseUrl),
+            token = trimmedToken.takeIf { it.isNotBlank() },
+          )
         }
-      }
+        .collect { config ->
+          val (enabled, wsUrl, token) = config
+          if (enabled && !wsUrl.isNullOrBlank() && token != null) {
+            WsManager.startInService(this@WsService, wsUrl, token) { state ->
+              val label = when (state) {
+                WsState.CONNECTED -> "Ligado ao Home Assistant"
+                WsState.CONNECTING -> "A ligar…"
+                WsState.DISCONNECTED -> "Desligado"
+              }
+              updateNotification(label)
+            }
+          } else {
+            WsManager.stop()
+            val message = when {
+              !enabled -> "Desativado"
+              wsUrl.isNullOrBlank() -> "URL em falta"
+              token == null -> "Token em falta"
+              else -> "Configuração inválida"
+            }
+            updateNotification(message)
+          }
+        }
     }
   }
+
+  private data class PrefSnapshot(
+    val lan: String,
+    val wan: String,
+    val token: String,
+    val enabled: Boolean,
+    val preferLan: Boolean,
+  )
 
   private data class WsConfig(
     val enabled: Boolean,

@@ -40,12 +40,15 @@ APP Android em **tema escuro azul**, para **notificações e alertas** integrado
 {
   "title":"Porta da Garagem",
   "body":"Aberta há 10 minutos.",
+  "bodyFormat":"markdown",
   "priority":"info|warning|critical",
   "persistent":true,
   "popup":true,
   "requireAck":true
 }
 ```
+
+> ℹ️ Se preferires texto simples, omite o campo `bodyFormat` ou envia `"text"`.
 
 ## Segurança
 - Guarda o token com **DataStore** (podes migrar para `EncryptedSharedPreferences`).

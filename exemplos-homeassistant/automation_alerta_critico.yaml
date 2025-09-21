@@ -12,7 +12,8 @@ automation:
           url: "https://teu-servidor/notify"  # ou Relay
           payload:
             title: "Porta da Garagem"
-            body: "Aberta há 10 minutos."
+            body: "**Aberta** há 10 minutos."
+            bodyFormat: "markdown"
             priority: "critical"
             popup: true
             persistent: true

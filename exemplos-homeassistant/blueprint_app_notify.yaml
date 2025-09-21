@@ -10,6 +10,11 @@ blueprint:
       selector: { text: {} }
     title: { name: Título, selector: { text: {} } }
     body: { name: Corpo, selector: { text: {} } }
+    body_format:
+      name: Formato do corpo
+      description: "Escolhe 'markdown' para renderizar o corpo com formatação."
+      default: text
+      selector: { select: { options: [text, markdown] } }
     priority:
       name: Prioridade
       default: warning
@@ -34,6 +39,7 @@ action:
       payload:
         title: !input title
         body: !input body
+        bodyFormat: !input body_format
         priority: !input priority
         popup: !input popup
         persistent: !input persistent
